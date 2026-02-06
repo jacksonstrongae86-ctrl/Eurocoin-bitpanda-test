@@ -1,0 +1,280 @@
+@model BitpandaExplorer.Models.Staking.StakingViewModel
+@{
+    ViewData["Title"] = "Staking";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="bi bi-layers"></i> Staking</h1>
+        <p class="text-muted mb-0">Genera ingresos pasivos con tus criptomonedas</p>
+    </div>
+    <span class="badge bg-info"><i class="bi bi-info-circle"></i> Informativo</span>
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="bi bi-lightbulb"></i>
+    <strong>Nota educativa:</strong> Los APY mostrados son estimaciones y pueden variar según condiciones del mercado.
+    Bitpanda puede ofrecer tasas diferentes. Consulta <a href="https://www.bitpanda.com/es/staking" target="_blank" class="alert-link">bitpanda.com/staking</a> para tasas actualizadas.
+</div>
+
+@if (Model.HasApiKey && Model.UserHoldings.Any())
+{
+    <!-- Resumen del usuario -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="stat-value">€@Model.TotalEligibleValueEUR.ToString("N2")</div>
+                <div class="stat-label"><i class="bi bi-wallet2"></i> Elegible para Staking</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="stat-value text-success">€@Model.EstimatedAnnualRewardsEUR.ToString("N2")</div>
+                <div class="stat-label"><i class="bi bi-gift"></i> Recompensas Anuales Est.</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="stat-value">@Model.UserHoldings.Count</div>
+                <div class="stat-label"><i class="bi bi-coin"></i> Activos Elegibles</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Holdings del usuario -->
+    <div class="card bg-dark mb-4">
+        <div class="card-header bg-secondary">
+            <i class="bi bi-person-check"></i> Tus Holdings Elegibles para Staking
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Activo</th>
+                            <th class="text-end">Balance</th>
+                            <th class="text-end">Valor EUR</th>
+                            <th class="text-end">APY Est.</th>
+                            <th class="text-end">Recompensa Anual Est.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var holding in Model.UserHoldings)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@holding.Symbol</strong>
+                                    <small class="text-muted d-block">@holding.Name</small>
+                                </td>
+                                <td class="text-end">@holding.BalanceFormatted</td>
+                                <td class="text-end">€@holding.ValueEUR.ToString("N2")</td>
+                                <td class="text-end text-success">@holding.EstimatedAPY.ToString("F1")%</td>
+                                <td class="text-end">
+                                    <span class="text-success">€@holding.EstimatedAnnualRewardEUR.ToString("N2")</span>
+                                    <small class="text-muted d-block">@holding.EstimatedAnnualReward.ToString("F6") @holding.Symbol</small>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-secondary">
+                            <td colspan="2"><strong>Total</strong></td>
+                            <td class="text-end"><strong>€@Model.TotalEligibleValueEUR.ToString("N2")</strong></td>
+                            <td></td>
+                            <td class="text-end"><strong class="text-success">€@Model.EstimatedAnnualRewardsEUR.ToString("N2")/año</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else if (Model.HasApiKey)
+{
+    <div class="alert alert-secondary mb-4">
+        <i class="bi bi-info-circle"></i>
+        No tienes holdings de activos elegibles para staking. Considera adquirir algunos de los activos listados abajo.
+    </div>
+}
+else
+{
+    <div class="alert alert-warning mb-4">
+        <i class="bi bi-key"></i>
+        <a href="/Home/Settings">Configura tu API Key</a> para ver tus holdings elegibles para staking.
+    </div>
+}
+
+<!-- Lista de activos con staking -->
+<div class="card bg-dark mb-4">
+    <div class="card-header bg-secondary d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-stars"></i> Activos con Staking Disponible</span>
+        <small class="text-muted">@Model.StakingAssets.Count activos</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Activo</th>
+                        <th class="text-end">APY Estimado</th>
+                        <th class="text-center">Bloqueo</th>
+                        <th>Frecuencia</th>
+                        <th>Mínimo</th>
+                        <th>Tipo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var asset in Model.StakingAssets.OrderByDescending(a => a.EstimatedAPY))
+                    {
+                        <tr>
+                            <td>
+                                <strong>@asset.Symbol</strong>
+                                <small class="text-muted d-block">@asset.Name</small>
+                            </td>
+                            <td class="text-end">
+                                <span class="text-success fw-bold">@asset.APYRange</span>
+                            </td>
+                            <td class="text-center">
+                                @if (asset.LockPeriodDays == 0)
+                                {
+                                    <span class="badge bg-success">Flexible</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">@asset.LockPeriodDays días</span>
+                                }
+                            </td>
+                            <td><small>@asset.RewardFrequency</small></td>
+                            <td><small>@asset.MinimumStake @asset.Symbol</small></td>
+                            <td><small class="text-muted">@asset.StakingType</small></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Información educativa -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card bg-dark h-100">
+            <div class="card-header bg-secondary">
+                <i class="bi bi-question-circle"></i> ¿Qué es el Staking?
+            </div>
+            <div class="card-body">
+                <p>El <strong>staking</strong> es el proceso de bloquear tus criptomonedas para ayudar a validar transacciones en una red blockchain <strong>Proof of Stake (PoS)</strong>.</p>
+                <p>A cambio de participar en la seguridad de la red, recibes <strong>recompensas</strong> en forma de más criptomonedas.</p>
+                <h6 class="mt-3">Ventajas:</h6>
+                <ul class="mb-0">
+                    <li>Ingresos pasivos sin vender tus activos</li>
+                    <li>Contribuyes a la seguridad de la red</li>
+                    <li>Generalmente más ecológico que minería PoW</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card bg-dark h-100">
+            <div class="card-header bg-secondary">
+                <i class="bi bi-exclamation-triangle"></i> Riesgos a Considerar
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li><strong>Volatilidad:</strong> El valor de tus activos puede bajar incluso mientras generas recompensas</li>
+                    <li><strong>Período de bloqueo:</strong> Algunos activos requieren bloquear fondos por días/semanas</li>
+                    <li><strong>Slashing:</strong> En algunas redes, el mal comportamiento del validador puede resultar en pérdida de fondos</li>
+                    <li><strong>APY variable:</strong> Las tasas cambian según participación de la red</li>
+                    <li><strong>Riesgo de plataforma:</strong> Confías tus fondos a Bitpanda</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card bg-dark">
+    <div class="card-header bg-secondary">
+        <i class="bi bi-calculator"></i> Calculadora de Staking
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Cantidad a Stakear</label>
+                <input type="number" id="calcAmount" class="form-control bg-dark text-light border-secondary" 
+                       value="1000" min="0" step="100">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Unidad</label>
+                <select id="calcUnit" class="form-select bg-dark text-light border-secondary">
+                    <option value="eur">EUR (€)</option>
+                    <option value="usd">USD ($)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">APY (%)</label>
+                <input type="number" id="calcAPY" class="form-control bg-dark text-light border-secondary" 
+                       value="5" min="0" max="100" step="0.5">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Período</label>
+                <select id="calcPeriod" class="form-select bg-dark text-light border-secondary">
+                    <option value="1">1 año</option>
+                    <option value="2">2 años</option>
+                    <option value="3">3 años</option>
+                    <option value="5">5 años</option>
+                </select>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-value text-success" id="resultRewards">€50.00</div>
+                    <div class="stat-label">Recompensas Totales</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-value" id="resultTotal">€1,050.00</div>
+                    <div class="stat-label">Valor Final</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-value text-info" id="resultMonthly">€4.17</div>
+                    <div class="stat-label">Recompensa Mensual</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function calculateStaking() {
+            var amount = parseFloat(document.getElementById('calcAmount').value) || 0;
+            var apy = parseFloat(document.getElementById('calcAPY').value) || 0;
+            var years = parseInt(document.getElementById('calcPeriod').value) || 1;
+            var unit = document.getElementById('calcUnit').value;
+            var symbol = unit === 'eur' ? '\u20AC' : '$';
+            
+            // Cálculo con interés compuesto anual
+            var finalValue = amount * Math.pow(1 + (apy / 100), years);
+            var totalRewards = finalValue - amount;
+            var monthlyReward = totalRewards / (years * 12);
+            
+            document.getElementById('resultRewards').textContent = 
+                symbol + totalRewards.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('resultTotal').textContent = 
+                symbol + finalValue.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('resultMonthly').textContent = 
+                symbol + monthlyReward.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        
+        // Calcular al cargar y al cambiar valores
+        document.getElementById('calcAmount').addEventListener('input', calculateStaking);
+        document.getElementById('calcAPY').addEventListener('input', calculateStaking);
+        document.getElementById('calcPeriod').addEventListener('change', calculateStaking);
+        document.getElementById('calcUnit').addEventListener('change', calculateStaking);
+        calculateStaking();
+    </script>
+}

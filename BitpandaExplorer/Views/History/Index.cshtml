@@ -157,6 +157,9 @@ else
         var labels = @Html.Raw(Model.ChartLabelsJson);
         var data = @Html.Raw(Model.ChartDataJson);
         var isPositive = @(isPositive ? "true" : "false");
+        var currency = '@Model.Currency';
+        var currencySymbol = currency === 'EUR' ? '\u20AC' : '$';
+        var assetSymbol = '@Model.Symbol';
         
         var gradient = ctx.createLinearGradient(0, 0, 0, 300);
         if (isPositive) {
@@ -172,7 +175,7 @@ else
             data: {
                 labels: labels,
                 datasets: [{
-                    label: '@Model.Symbol Price (@Model.Currency)',
+                    label: assetSymbol,
                     data: data,
                     borderColor: isPositive ? '#00b894' : '#e94560',
                     backgroundColor: gradient,
@@ -201,8 +204,15 @@ else
                         borderColor: '#e94560',
                         borderWidth: 1,
                         callbacks: {
+                            title: function(tooltipItems) {
+                                return tooltipItems[0].label;
+                            },
                             label: function(context) {
-                                return '@(Model.Currency == "EUR" ? "€" : "$")' + context.parsed.y.toFixed(2);
+                                var value = context.parsed.y.toLocaleString('es-ES', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                });
+                                return assetSymbol + ': ' + currencySymbol + value;
                             }
                         }
                     }
@@ -226,7 +236,7 @@ else
                         ticks: {
                             color: '#888',
                             callback: function(value) {
-                                return '@(Model.Currency == "EUR" ? "€" : "$")' + value.toLocaleString();
+                                return currencySymbol + value.toLocaleString('es-ES');
                             }
                         }
                     }

@@ -7,7 +7,10 @@
     <div>
         <h1><i class="bi bi-graph-up"></i> Precios Actuales</h1>
         <p class="text-muted mb-0">
-            @Model.TotalAssets activos • Actualizado: @Model.LastUpdated.ToString("HH:mm:ss")
+            @Model.TotalAssets activos • Actualizado: <span id="last-update">@Model.LastUpdated.ToString("HH:mm:ss")</span>
+            <span id="live-indicator" class="badge bg-success ms-2" style="display:none;">
+                <i class="bi bi-broadcast"></i> LIVE
+            </span>
         </p>
     </div>
     <span class="badge bg-success"><i class="bi bi-unlock"></i> Público</span>
@@ -50,15 +53,15 @@
                         <th class="text-end">GBP</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="prices-table">
                     @{ var index = 1; }
                     @foreach (var item in Model.Items)
                     {
-                        <tr>
+                        <tr data-symbol="@item.Symbol">
                             <td class="text-muted">@index</td>
                             <td><strong>@item.Symbol</strong></td>
-                            <td class="text-end text-success">€@item.PriceEUR.ToString("N8")</td>
-                            <td class="text-end">$@item.PriceUSD.ToString("N8")</td>
+                            <td class="text-end text-success price-eur">€@item.PriceEUR.ToString("N8")</td>
+                            <td class="text-end price-usd">$@item.PriceUSD.ToString("N8")</td>
                             <td class="text-end text-muted">@(item.Prices?.CHF ?? "---")</td>
                             <td class="text-end text-muted">@(item.Prices?.GBP ?? "---")</td>
                         </tr>
@@ -75,6 +78,96 @@
     <div class="card-body">
         <p><strong>Endpoint:</strong> <code>GET https://api.bitpanda.com/v1/ticker</code></p>
         <p><strong>Auth:</strong> No requerida</p>
+        <p><strong>SignalR:</strong> <code>/pricehub</code> (actualizaciones en tiempo real)</p>
         <p class="mb-0"><strong>API JSON:</strong> <a href="/Ticker/Api">/Ticker/Api</a></p>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Esperar a que SignalR esté conectado
+        document.addEventListener('DOMContentLoaded', function() {
+            var checkHub = setInterval(function() {
+                if (window.priceHub && window.priceHub.state === signalR.HubConnectionState.Connected) {
+                    clearInterval(checkHub);
+                    setupLiveUpdates();
+                }
+            }, 500);
+        });
+        
+        function setupLiveUpdates() {
+            // Mostrar indicador LIVE
+            document.getElementById('live-indicator').style.display = 'inline';
+            
+            // Escuchar actualizaciones de precios
+            window.priceHub.on("ReceivePrices", function(prices) {
+                updatePricesTable(prices);
+            });
+            
+            console.log('Live updates activos para precios');
+        }
+        
+        function updatePricesTable(prices) {
+            prices.forEach(function(price) {
+                var row = document.querySelector('tr[data-symbol="' + price.symbol + '"]');
+                if (row) {
+                    var eurCell = row.querySelector('.price-eur');
+                    var usdCell = row.querySelector('.price-usd');
+                    
+                    if (eurCell && usdCell) {
+                        var oldEur = parseFloat(eurCell.textContent.replace(/[€,]/g, ''));
+                        var newEur = price.priceEUR;
+                        
+                        // Actualizar valores
+                        eurCell.textContent = '€' + formatNumber(newEur);
+                        usdCell.textContent = '$' + formatNumber(price.priceUSD);
+                        
+                        // Efecto visual de cambio
+                        if (newEur > oldEur) {
+                            flashCell(eurCell, 'flash-green');
+                        } else if (newEur < oldEur) {
+                            flashCell(eurCell, 'flash-red');
+                        }
+                    }
+                }
+            });
+            
+            // Actualizar timestamp
+            var now = new Date();
+            document.getElementById('last-update').textContent = 
+                now.toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+        }
+        
+        function formatNumber(num) {
+            if (num >= 1) {
+                return num.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            } else {
+                return num.toLocaleString('es-ES', {minimumFractionDigits: 8, maximumFractionDigits: 8});
+            }
+        }
+        
+        function flashCell(cell, className) {
+            cell.classList.add(className);
+            setTimeout(function() {
+                cell.classList.remove(className);
+            }, 500);
+        }
+    </script>
+    
+    <style>
+        .flash-green {
+            animation: flashGreen 0.5s ease-out;
+        }
+        .flash-red {
+            animation: flashRed 0.5s ease-out;
+        }
+        @@keyframes flashGreen {
+            0% { background-color: rgba(0, 184, 148, 0.5); }
+            100% { background-color: transparent; }
+        }
+        @@keyframes flashRed {
+            0% { background-color: rgba(233, 69, 96, 0.5); }
+            100% { background-color: transparent; }
+        }
+    </style>
+}

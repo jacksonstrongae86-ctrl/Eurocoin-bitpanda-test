@@ -31,6 +31,7 @@
  */
 
 using BitpandaExplorer.Services;
+using BitpandaExplorer.Hubs;
 
 // ============================================================================
 // 1. CREAR EL BUILDER
@@ -62,6 +63,12 @@ builder.Services.AddSingleton<IBitpandaService, BitpandaService>();
 // Registrar servicio de CoinGecko para datos históricos
 // Singleton: Compartir la misma instancia
 builder.Services.AddSingleton<ICoinGeckoService, CoinGeckoService>();
+
+// Añadir SignalR para comunicación en tiempo real
+builder.Services.AddSignalR();
+
+// Registrar servicio de actualización de precios en segundo plano
+builder.Services.AddHostedService<PriceUpdateService>();
 
 // ============================================================================
 // 3. CONFIGURAR KESTREL (SERVIDOR WEB)
@@ -113,6 +120,10 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Mapear hub de SignalR para precios en tiempo real
+// Los clientes se conectan via: /pricehub
+app.MapHub<PriceHub>("/pricehub");
 
 // ============================================================================
 // 7. EJECUTAR LA APLICACIÓN

@@ -34,6 +34,7 @@
 
 using System.Net.Http.Headers;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 using BitpandaExplorer.Models.Ticker;
 using BitpandaExplorer.Models.Wallet;
 using BitpandaExplorer.Models.Trade;
@@ -60,16 +61,26 @@ namespace BitpandaExplorer.Services
         /// <summary>Logger para diagnóstico</summary>
         private readonly ILogger<BitpandaService> _logger;
 
+        /// <summary>Cache en memoria para reducir llamadas a API</summary>
+        private readonly IMemoryCache _cache;
+
         /// <summary>URL base de la API de Bitpanda (trailing slash requerido)</summary>
         private const string BASE_URL = "https://api.bitpanda.com/v1/";
 
         /// <summary>API Key actual (puede ser null)</summary>
         private string? _apiKey;
 
-        /// <summary>Cache del ticker para evitar peticiones excesivas</summary>
-        private Dictionary<string, AssetPrices>? _tickerCache;
-        private DateTime _tickerCacheTime = DateTime.MinValue;
-        private readonly TimeSpan _tickerCacheDuration = TimeSpan.FromSeconds(30);
+        // ====================================================================
+        // CACHE KEYS Y DURACIONES
+        // ====================================================================
+        
+        private const string CACHE_KEY_TICKER = "bitpanda_ticker";
+        private const string CACHE_KEY_WALLETS = "bitpanda_wallets";
+        private const string CACHE_KEY_TRADES = "bitpanda_trades";
+        
+        private static readonly TimeSpan CACHE_DURATION_TICKER = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan CACHE_DURATION_WALLETS = TimeSpan.FromMinutes(2);
+        private static readonly TimeSpan CACHE_DURATION_TRADES = TimeSpan.FromMinutes(5);
 
         // ====================================================================
         // CONSTRUCTOR
@@ -82,14 +93,17 @@ namespace BitpandaExplorer.Services
         /// <param name="httpClientFactory">Factory para HttpClient</param>
         /// <param name="configuration">Configuración de appsettings</param>
         /// <param name="logger">Logger</param>
+        /// <param name="cache">Cache en memoria</param>
         public BitpandaService(
             IHttpClientFactory httpClientFactory,
             IConfiguration configuration,
-            ILogger<BitpandaService> logger)
+            ILogger<BitpandaService> logger,
+            IMemoryCache cache)
         {
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
             _logger = logger;
+            _cache = cache;
 
             // Intentar cargar API Key de configuración
             _apiKey = _configuration["Bitpanda:ApiKey"];
@@ -199,16 +213,25 @@ namespace BitpandaExplorer.Services
         }
 
         // ====================================================================
-        // TICKER (PÚBLICO)
+        // TICKER (PÚBLICO) - CON CACHE
         // ====================================================================
 
         /// <inheritdoc/>
         public async Task<TickerViewModel> GetTickerAsync()
         {
+            // Intentar obtener del cache primero
+            if (_cache.TryGetValue(CACHE_KEY_TICKER, out TickerViewModel? cachedResult) && cachedResult != null)
+            {
+                _logger.LogDebug("Ticker obtenido de cache");
+                return cachedResult;
+            }
+
             var viewModel = new TickerViewModel();
 
             try
             {
+                _logger.LogInformation("Fetching ticker from API (cache miss)");
+                
                 // El ticker devuelve un Dictionary<string, Dictionary<string, string>>
                 using var client = CreateClient(authenticated: false);
                 var response = await client.GetAsync("ticker");
@@ -228,10 +251,6 @@ namespace BitpandaExplorer.Services
                     return viewModel;
                 }
 
-                // Actualizar cache
-                _tickerCache = ticker;
-                _tickerCacheTime = DateTime.UtcNow;
-
                 // Convertir a lista de items
                 viewModel.Items = ticker
                     .Select(kvp => new TickerItem
@@ -245,6 +264,16 @@ namespace BitpandaExplorer.Services
                     .ToList();
 
                 viewModel.LastUpdated = DateTime.UtcNow;
+                
+                // Guardar en cache
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(CACHE_DURATION_TICKER);
+                _cache.Set(CACHE_KEY_TICKER, viewModel, cacheOptions);
+                
+                // También guardar el diccionario raw para GetPriceEURAsync
+                _cache.Set($"{CACHE_KEY_TICKER}_raw", ticker, cacheOptions);
+                
+                _logger.LogInformation("Ticker cached: {Count} assets", viewModel.Items.Count);
             }
             catch (Exception ex)
             {
@@ -260,29 +289,45 @@ namespace BitpandaExplorer.Services
         /// </summary>
         private async Task<decimal> GetPriceEURAsync(string symbol)
         {
-            // Refrescar cache si expiró
-            if (_tickerCache == null || 
-                DateTime.UtcNow - _tickerCacheTime > _tickerCacheDuration)
+            // Intentar obtener del cache
+            if (_cache.TryGetValue($"{CACHE_KEY_TICKER}_raw", out Dictionary<string, AssetPrices>? tickerCache) 
+                && tickerCache != null)
             {
-                await GetTickerAsync();
+                if (tickerCache.TryGetValue(symbol, out var prices))
+                {
+                    return ParseDecimal(prices.EUR);
+                }
             }
-
-            if (_tickerCache != null && 
-                _tickerCache.TryGetValue(symbol, out var prices))
+            
+            // Si no hay cache, refrescar
+            await GetTickerAsync();
+            
+            // Intentar de nuevo
+            if (_cache.TryGetValue($"{CACHE_KEY_TICKER}_raw", out tickerCache) && tickerCache != null)
             {
-                return ParseDecimal(prices.EUR);
+                if (tickerCache.TryGetValue(symbol, out var prices))
+                {
+                    return ParseDecimal(prices.EUR);
+                }
             }
 
             return 0;
         }
 
         // ====================================================================
-        // WALLETS (REQUIERE AUTH)
+        // WALLETS (REQUIERE AUTH) - CON CACHE
         // ====================================================================
 
         /// <inheritdoc/>
         public async Task<WalletsViewModel> GetWalletsAsync()
         {
+            // Intentar obtener del cache primero
+            if (_cache.TryGetValue(CACHE_KEY_WALLETS, out WalletsViewModel? cachedResult) && cachedResult != null)
+            {
+                _logger.LogDebug("Wallets obtenidos de cache");
+                return cachedResult;
+            }
+            
             var viewModel = new WalletsViewModel
             {
                 HasApiKey = HasApiKey
@@ -296,6 +341,8 @@ namespace BitpandaExplorer.Services
 
             try
             {
+                _logger.LogInformation("Fetching wallets from API (cache miss)");
+                
                 // Obtener ambos tipos de wallets en paralelo
                 var cryptoTask = GetCryptoWalletsAsync();
                 var fiatTask = GetFiatWalletsAsync();
@@ -326,6 +373,14 @@ namespace BitpandaExplorer.Services
                     viewModel.FiatWallets.Sum(w => w.ValueEUR ?? 0);
 
                 viewModel.LastUpdated = DateTime.UtcNow;
+                
+                // Guardar en cache
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(CACHE_DURATION_WALLETS);
+                _cache.Set(CACHE_KEY_WALLETS, viewModel, cacheOptions);
+                
+                _logger.LogInformation("Wallets cached: {CryptoCount} crypto, {FiatCount} fiat", 
+                    viewModel.CryptoWallets.Count, viewModel.FiatWallets.Count);
             }
             catch (Exception ex)
             {

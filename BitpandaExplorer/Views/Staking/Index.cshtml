@@ -11,10 +11,10 @@
     <span class="badge bg-info"><i class="bi bi-info-circle"></i> Informativo</span>
 </div>
 
-<div class="alert alert-info mb-4">
+<div class="alert alert-info mb-4" style="background-color: #1a3a5a; border-color: #2a4a6a;">
     <i class="bi bi-lightbulb"></i>
-    <strong>Nota educativa:</strong> Los APY mostrados son estimaciones y pueden variar según condiciones del mercado.
-    Bitpanda puede ofrecer tasas diferentes. Consulta <a href="https://www.bitpanda.com/es/staking" target="_blank" class="alert-link">bitpanda.com/staking</a> para tasas actualizadas.
+    <strong>Nota educativa:</strong> Los APY mostrados son <strong>datos estáticos de ejemplo</strong> (no provienen de ninguna API).
+    Bitpanda no expone endpoints de staking en su API pública. Consulta <a href="https://www.bitpanda.com/es/staking" target="_blank" class="alert-link">bitpanda.com/staking</a> para tasas reales.
 </div>
 
 @if (Model.HasApiKey && Model.UserHoldings.Any())
@@ -91,14 +91,14 @@
 }
 else if (Model.HasApiKey)
 {
-    <div class="alert alert-secondary mb-4">
+    <div class="alert alert-secondary mb-4" style="background-color: #2a2a4a; border-color: #3a3a5a;">
         <i class="bi bi-info-circle"></i>
         No tienes holdings de activos elegibles para staking. Considera adquirir algunos de los activos listados abajo.
     </div>
 }
 else
 {
-    <div class="alert alert-warning mb-4">
+    <div class="alert alert-warning mb-4" style="background-color: #4a3a1a; border-color: #5a4a2a;">
         <i class="bi bi-key"></i>
         <a href="/Home/Settings">Configura tu API Key</a> para ver tus holdings elegibles para staking.
     </div>

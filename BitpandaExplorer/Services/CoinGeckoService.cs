@@ -18,6 +18,7 @@
  */
 
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 using BitpandaExplorer.Models.History;
 
 namespace BitpandaExplorer.Services
@@ -33,7 +34,17 @@ namespace BitpandaExplorer.Services
 
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<CoinGeckoService> _logger;
+        private readonly IMemoryCache _cache;
         private const string BASE_URL = "https://api.coingecko.com/api/v3/";
+        
+        // Cache durations varían según el período solicitado
+        private static TimeSpan GetCacheDuration(int days) => days switch
+        {
+            1 => TimeSpan.FromMinutes(5),      // 24h data: cache 5 min
+            7 => TimeSpan.FromMinutes(15),     // 7 days: cache 15 min
+            30 => TimeSpan.FromMinutes(30),    // 30 days: cache 30 min
+            _ => TimeSpan.FromHours(1)         // 90+ days: cache 1 hour
+        };
 
         /// <summary>
         /// Mapeo de símbolos de Bitpanda a IDs de CoinGecko.
@@ -89,10 +100,12 @@ namespace BitpandaExplorer.Services
 
         public CoinGeckoService(
             IHttpClientFactory httpClientFactory,
-            ILogger<CoinGeckoService> logger)
+            ILogger<CoinGeckoService> logger,
+            IMemoryCache cache)
         {
             _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _cache = cache;
         }
 
         // ====================================================================
@@ -112,6 +125,16 @@ namespace BitpandaExplorer.Services
             int days = 7, 
             string currency = "eur")
         {
+            // Crear cache key única para esta combinación
+            var cacheKey = $"coingecko_history_{symbol.ToUpperInvariant()}_{days}_{currency.ToLowerInvariant()}";
+            
+            // Intentar obtener del cache
+            if (_cache.TryGetValue(cacheKey, out PriceHistoryViewModel? cachedResult) && cachedResult != null)
+            {
+                _logger.LogDebug("Price history for {Symbol} obtained from cache", symbol);
+                return cachedResult;
+            }
+            
             var viewModel = new PriceHistoryViewModel
             {
                 Symbol = symbol.ToUpperInvariant(),
@@ -121,6 +144,8 @@ namespace BitpandaExplorer.Services
 
             try
             {
+                _logger.LogInformation("Fetching price history for {Symbol} from CoinGecko (cache miss)", symbol);
+                
                 // Obtener el ID de CoinGecko
                 var upperSymbol = symbol.ToUpperInvariant();
                 if (!SymbolMapping.TryGetValue(upperSymbol, out var coinInfo))
@@ -188,8 +213,14 @@ namespace BitpandaExplorer.Services
                 }
 
                 viewModel.LastUpdated = DateTime.UtcNow;
-                _logger.LogInformation("Fetched {Count} price points for {Symbol}", 
-                    viewModel.Prices.Count, symbol);
+                
+                // Guardar en cache con duración apropiada según el período
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(GetCacheDuration(days));
+                _cache.Set(cacheKey, viewModel, cacheOptions);
+                
+                _logger.LogInformation("Cached {Count} price points for {Symbol} ({Days}d, expires in {Duration})", 
+                    viewModel.Prices.Count, symbol, days, GetCacheDuration(days));
             }
             catch (Exception ex)
             {

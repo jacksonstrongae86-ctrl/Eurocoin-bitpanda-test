@@ -46,6 +46,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Esto registra todos los servicios necesarios para MVC
 builder.Services.AddControllersWithViews();
 
+// Añadir MemoryCache para caching de datos
+// Reduce llamadas a APIs externas y mejora rendimiento
+builder.Services.AddMemoryCache();
+
 // Añadir HttpClientFactory
 // Patrón recomendado para crear HttpClient de forma eficiente
 // Evita problemas de socket exhaustion

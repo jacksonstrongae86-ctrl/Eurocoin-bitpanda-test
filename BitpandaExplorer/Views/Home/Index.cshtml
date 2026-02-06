@@ -1,0 +1,147 @@
+@model BitpandaExplorer.Controllers.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+        <p class="text-muted">Resumen de tu cuenta Bitpanda y precios del mercado</p>
+    </div>
+</div>
+
+@if (!Model.HasApiKey)
+{
+    <div class="alert alert-info d-flex align-items-center" role="alert">
+        <i class="bi bi-info-circle me-2"></i>
+        <div>
+            <strong>API Key no configurada.</strong> 
+            Los datos de wallets y trades requieren autenticación.
+            <a href="/Home/Settings" class="alert-link">Configurar API Key</a>
+        </div>
+    </div>
+}
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <div class="stat-value">
+                @if (Model.HasApiKey)
+                {
+                    <span>€@Model.TotalPortfolioEUR.ToString("N2")</span>
+                }
+                else
+                {
+                    <span class="text-muted">---</span>
+                }
+            </div>
+            <div class="stat-label">
+                <i class="bi bi-wallet2"></i> Valor Total (EUR)
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <div class="stat-value">
+                @if (Model.HasApiKey)
+                {
+                    <span>@Model.WalletCount</span>
+                }
+                else
+                {
+                    <span class="text-muted">---</span>
+                }
+            </div>
+            <div class="stat-label">
+                <i class="bi bi-collection"></i> Wallets Activos
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <div class="stat-value">
+                @if (Model.HasApiKey)
+                {
+                    <span>@Model.RecentTradesCount</span>
+                }
+                else
+                {
+                    <span class="text-muted">---</span>
+                }
+            </div>
+            <div class="stat-label">
+                <i class="bi bi-arrow-left-right"></i> Total Trades
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card bg-dark">
+    <div class="card-header bg-secondary d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-graph-up"></i> Precios Destacados</span>
+        <small class="text-muted">
+            Actualizado: @Model.TickerUpdated.ToString("HH:mm:ss")
+        </small>
+    </div>
+    <div class="card-body">
+        @if (Model.TopAssets.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Símbolo</th>
+                            <th class="text-end">Precio EUR</th>
+                            <th class="text-end">Precio USD</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var asset in Model.TopAssets)
+                        {
+                            <tr>
+                                <td><strong>@asset.Symbol</strong></td>
+                                <td class="text-end">€@asset.PriceEUR.ToString("N2")</td>
+                                <td class="text-end">$@asset.PriceUSD.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-center mt-3">
+                <a href="/Ticker" class="btn btn-primary">
+                    <i class="bi bi-arrow-right"></i> Ver todos los precios
+                </a>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted text-center mb-0">No hay datos disponibles</p>
+        }
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6 mb-3">
+        <div class="card bg-dark h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-wallet2"></i> Wallets</h5>
+                <p class="card-text text-muted">
+                    Visualiza tus wallets de crypto y fiat con sus balances actuales.
+                </p>
+                <a href="/Wallets" class="btn btn-outline-light btn-sm">Ver Wallets</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="card bg-dark h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-clock-history"></i> Historial</h5>
+                <p class="card-text text-muted">
+                    Revisa tu historial de trades y transacciones.
+                </p>
+                <a href="/Trades" class="btn btn-outline-light btn-sm me-2">Trades</a>
+                <a href="/Transactions" class="btn btn-outline-light btn-sm">Transacciones</a>
+            </div>
+        </div>
+    </div>
+</div>

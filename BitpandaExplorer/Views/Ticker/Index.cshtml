@@ -1,0 +1,80 @@
+@model BitpandaExplorer.Models.Ticker.TickerViewModel
+@{
+    ViewData["Title"] = "Precios";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="bi bi-graph-up"></i> Precios Actuales</h1>
+        <p class="text-muted mb-0">
+            @Model.TotalAssets activos • Actualizado: @Model.LastUpdated.ToString("HH:mm:ss")
+        </p>
+    </div>
+    <span class="badge bg-success"><i class="bi bi-unlock"></i> Público</span>
+</div>
+
+@if (!Model.IsSuccess)
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i> @Model.ErrorMessage
+    </div>
+}
+
+<div class="card bg-dark mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="Search" class="row g-3">
+            <div class="col-md-9">
+                <input type="text" name="symbol" class="form-control bg-dark text-light border-secondary"
+                       placeholder="Buscar símbolo (BTC, ETH...)" value="@ViewBag.SearchQuery">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card bg-dark">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th>Símbolo</th>
+                        <th class="text-end">EUR</th>
+                        <th class="text-end">USD</th>
+                        <th class="text-end">CHF</th>
+                        <th class="text-end">GBP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ var index = 1; }
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="text-muted">@index</td>
+                            <td><strong>@item.Symbol</strong></td>
+                            <td class="text-end text-success">€@item.PriceEUR.ToString("N8")</td>
+                            <td class="text-end">$@item.PriceUSD.ToString("N8")</td>
+                            <td class="text-end text-muted">@(item.Prices?.CHF ?? "---")</td>
+                            <td class="text-end text-muted">@(item.Prices?.GBP ?? "---")</td>
+                        </tr>
+                        index++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card bg-dark mt-4">
+    <div class="card-header bg-secondary"><i class="bi bi-code-slash"></i> Endpoint Info</div>
+    <div class="card-body">
+        <p><strong>Endpoint:</strong> <code>GET https://api.bitpanda.com/v1/ticker</code></p>
+        <p><strong>Auth:</strong> No requerida</p>
+        <p class="mb-0"><strong>API JSON:</strong> <a href="/Ticker/Api">/Ticker/Api</a></p>
+    </div>
+</div>

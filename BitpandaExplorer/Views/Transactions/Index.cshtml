@@ -1,0 +1,118 @@
+@model BitpandaExplorer.Models.Transaction.TransactionsViewModel
+@{
+    ViewData["Title"] = "Transacciones";
+    var types = ViewBag.AvailableTypes as string[] ?? Array.Empty<string>();
+    var statuses = ViewBag.AvailableStatuses as string[] ?? Array.Empty<string>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="bi bi-list-ul"></i> Transacciones</h1>
+        <p class="text-muted mb-0">Depósitos, retiros, transferencias</p>
+    </div>
+    <span class="badge bg-warning text-dark"><i class="bi bi-lock"></i> Requiere API Key</span>
+</div>
+
+@if (!Model.HasApiKey)
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        API Key no configurada. <a href="/Home/Settings">Configurar ahora</a>
+    </div>
+}
+else if (!Model.IsSuccess)
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i> @Model.ErrorMessage
+    </div>
+}
+else
+{
+    <div class="card bg-dark mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Categoría</label>
+                    <select name="category" class="form-select bg-dark text-light border-secondary">
+                        <option value="all" selected="@(Model.CategoryFilter == "all")">Todas</option>
+                        <option value="crypto" selected="@(Model.CategoryFilter == "crypto")">Crypto</option>
+                        <option value="fiat" selected="@(Model.CategoryFilter == "fiat")">Fiat</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tipo</label>
+                    <select name="type" class="form-select bg-dark text-light border-secondary">
+                        <option value="">Todos</option>
+                        @foreach (var t in types)
+                        {
+                            <option value="@t" selected="@(Model.TypeFilter == t)">@t</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Estado</label>
+                    <select name="status" class="form-select bg-dark text-light border-secondary">
+                        <option value="">Todos</option>
+                        @foreach (var s in statuses)
+                        {
+                            <option value="@s" selected="@(Model.StatusFilter == s)">@s</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i> Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <a href="/Transactions/Deposits" class="btn btn-outline-success me-2">
+            <i class="bi bi-arrow-down-circle"></i> Depósitos
+        </a>
+        <a href="/Transactions/Withdrawals" class="btn btn-outline-danger me-2">
+            <i class="bi bi-arrow-up-circle"></i> Retiros
+        </a>
+    </div>
+
+    <div class="card bg-dark">
+        <div class="card-body p-0">
+            @if (Model.Transactions.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Cat.</th>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Activo</th>
+                                <th class="text-end">Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var tx in Model.Transactions)
+                            {
+                                <tr>
+                                    <td><small class="text-muted">@tx.Date.ToString("dd/MM HH:mm")</small></td>
+                                    <td><span class="badge @(tx.Category == "crypto" ? "bg-info" : "bg-secondary")">@tx.Category</span></td>
+                                    <td><span class="@tx.TypeColor">@tx.TypeIcon @tx.Type</span></td>
+                                    <td><span class="badge @tx.StatusBadge">@tx.Status</span></td>
+                                    <td><strong>@tx.Symbol</strong></td>
+                                    <td class="text-end">@tx.Amount.ToString("N8")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted text-center py-4 mb-0">No hay transacciones</p>
+            }
+        </div>
+    </div>
+}

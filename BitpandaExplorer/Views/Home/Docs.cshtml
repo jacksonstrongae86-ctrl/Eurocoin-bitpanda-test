@@ -1,0 +1,137 @@
+@{
+    ViewData["Title"] = "Documentación";
+}
+
+<div class="row">
+    <div class="col-lg-3 mb-4">
+        <div class="card sticky-top" style="top: 80px;">
+            <div class="card-header">
+                <i class="bi bi-book"></i> Contenido
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="#estructura" class="list-group-item list-group-item-action bg-dark text-light">Estructura</a>
+                <a href="#conceptos" class="list-group-item list-group-item-action bg-dark text-light">Conceptos</a>
+                <a href="#api" class="list-group-item list-group-item-action bg-dark text-light">API Bitpanda</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-9">
+        <h1><i class="bi bi-book"></i> Documentación</h1>
+        <p class="lead text-muted">Guía del proyecto Bitpanda Explorer</p>
+
+        <div class="card mb-4" id="estructura">
+            <div class="card-header"><i class="bi bi-folder"></i> Estructura del Proyecto</div>
+            <div class="card-body">
+                <pre style="color: #f8f8f2;"><code>BitpandaExplorer/
+├── Program.cs            # Punto de entrada + DI
+├── Controllers/          # Controladores MVC
+│   ├── HomeController    # Dashboard + Settings
+│   ├── TickerController  # Precios (público)
+│   ├── WalletsController # Wallets (privado)
+│   ├── TradesController  # Trades
+│   └── TransactionsController
+├── Models/               # Modelos de datos
+│   ├── Ticker/          
+│   ├── Wallet/          
+│   ├── Trade/           
+│   └── Transaction/     
+├── Services/             # Lógica de negocio
+│   ├── IBitpandaService # Interfaz
+│   └── BitpandaService  # Implementación
+└── Views/                # Vistas Razor</code></pre>
+            </div>
+        </div>
+
+        <div class="card mb-4" id="conceptos">
+            <div class="card-header"><i class="bi bi-lightbulb"></i> Conceptos Clave</div>
+            <div class="card-body">
+                <h5>1. Dependency Injection</h5>
+                <p>Los servicios se registran en Program.cs y se inyectan en constructores:</p>
+                <pre style="color: #f8f8f2;"><code>// Registro en Program.cs
+builder.Services.AddSingleton&lt;IBitpandaService, BitpandaService&gt;();
+
+// Inyección en Controller
+public HomeController(IBitpandaService service)
+{
+    _service = service;
+}</code></pre>
+
+                <h5 class="mt-4">2. Async/Await</h5>
+                <p>Operaciones asíncronas para no bloquear threads:</p>
+                <pre style="color: #f8f8f2;"><code>public async Task&lt;IActionResult&gt; Index()
+{
+    var data = await _service.GetTickerAsync();
+    return View(data);
+}</code></pre>
+
+                <h5 class="mt-4">3. Patrón MVC</h5>
+                <ul>
+                    <li><strong>Model:</strong> Datos (clases en /Models)</li>
+                    <li><strong>View:</strong> Presentación (.cshtml)</li>
+                    <li><strong>Controller:</strong> Lógica de peticiones</li>
+                </ul>
+
+                <h5 class="mt-4">4. Interfaces</h5>
+                <p>Definen contratos que las implementaciones deben cumplir:</p>
+                <pre style="color: #f8f8f2;"><code>public interface IBitpandaService
+{
+    Task&lt;TickerViewModel&gt; GetTickerAsync();
+}
+
+public class BitpandaService : IBitpandaService
+{
+    // Implementación...
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="card mb-4" id="api">
+            <div class="card-header"><i class="bi bi-cloud"></i> API de Bitpanda</div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Endpoint</th>
+                            <th>Auth</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>GET /ticker</code></td>
+                            <td><span class="badge bg-success">Público</span></td>
+                            <td>Precios actuales</td>
+                        </tr>
+                        <tr>
+                            <td><code>GET /wallets</code></td>
+                            <td><span class="badge bg-warning text-dark">API Key</span></td>
+                            <td>Wallets crypto</td>
+                        </tr>
+                        <tr>
+                            <td><code>GET /fiatwallets</code></td>
+                            <td><span class="badge bg-warning text-dark">API Key</span></td>
+                            <td>Wallets fiat</td>
+                        </tr>
+                        <tr>
+                            <td><code>GET /trades</code></td>
+                            <td><span class="badge bg-warning text-dark">API Key</span></td>
+                            <td>Historial trades</td>
+                        </tr>
+                        <tr>
+                            <td><code>GET /wallets/transactions</code></td>
+                            <td><span class="badge bg-warning text-dark">API Key</span></td>
+                            <td>Transacciones</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p class="mt-3">
+                    <strong>Base URL:</strong> <code>https://api.bitpanda.com/v1</code><br>
+                    <strong>Auth Header:</strong> <code>X-Api-Key: YOUR_KEY</code><br>
+                    <strong>Docs:</strong> <a href="https://developers.bitpanda.com/platform/" target="_blank">developers.bitpanda.com</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

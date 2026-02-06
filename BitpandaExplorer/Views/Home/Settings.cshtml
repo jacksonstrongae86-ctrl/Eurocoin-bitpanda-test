@@ -1,0 +1,73 @@
+@model BitpandaExplorer.Controllers.SettingsViewModel
+@{
+    ViewData["Title"] = "Configuración";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-gear"></i> Configuración de API Key
+            </div>
+            <div class="card-body">
+                
+                <div class="alert @(Model.HasApiKey ? "alert-success" : "alert-warning") d-flex align-items-center">
+                    <i class="bi @(Model.HasApiKey ? "bi-check-circle" : "bi-exclamation-triangle") me-2"></i>
+                    <span>
+                        @if (Model.HasApiKey)
+                        {
+                            <span>API Key configurada correctamente</span>
+                        }
+                        else
+                        {
+                            <span>API Key no configurada</span>
+                        }
+                    </span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+                {
+                    <div class="alert alert-success">@Model.SuccessMessage</div>
+                }
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="alert alert-danger">@Model.ErrorMessage</div>
+                }
+
+                <form method="post" asp-action="Settings">
+                    <div class="mb-3">
+                        <label for="apiKey" class="form-label">API Key de Bitpanda</label>
+                        <input type="password" 
+                               class="form-control bg-dark text-light border-secondary" 
+                               id="apiKey" 
+                               name="ApiKey"
+                               placeholder="Ingresa tu API Key">
+                        <div class="form-text">
+                            La API Key se almacena solo en memoria durante la sesión.
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Guardar
+                    </button>
+                </form>
+
+                <hr class="my-4">
+
+                <h5>¿Cómo obtener tu API Key?</h5>
+                <ol class="text-muted">
+                    <li>Inicia sesión en <a href="https://www.bitpanda.com" target="_blank">Bitpanda</a></li>
+                    <li>Ve a <strong>Perfil → Seguridad → API Keys</strong></li>
+                    <li>Crea una nueva API Key</li>
+                    <li>Configura permisos de <strong>lectura</strong> (Read)</li>
+                    <li>Copia la key (solo se muestra una vez)</li>
+                </ol>
+
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-shield-check"></i>
+                    <strong>Seguridad:</strong> Nunca compartas tu API Key. 
+                    Esta aplicación es solo para fines educativos.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

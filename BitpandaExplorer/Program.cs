@@ -55,6 +55,10 @@ builder.Services.AddHttpClient();
 // Singleton: Una sola instancia compartida (mantiene cache del ticker)
 builder.Services.AddSingleton<IBitpandaService, BitpandaService>();
 
+// Registrar servicio de CoinGecko para datos históricos
+// Singleton: Compartir la misma instancia
+builder.Services.AddSingleton<ICoinGeckoService, CoinGeckoService>();
+
 // ============================================================================
 // 3. CONFIGURAR KESTREL (SERVIDOR WEB)
 // ============================================================================
@@ -120,6 +124,7 @@ Console.WriteLine(@"
 ║   Endpoints disponibles:                                        ║
 ║   • /           - Dashboard principal                           ║
 ║   • /Ticker     - Precios actuales (público)                   ║
+║   • /History    - Historial de precios (CoinGecko)             ║
 ║   • /Wallets    - Tus wallets (requiere API Key)               ║
 ║   • /Trades     - Historial de trades (requiere API Key)       ║
 ║   • /Transactions - Historial de transacciones                 ║
